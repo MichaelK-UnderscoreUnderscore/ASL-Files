@@ -6,8 +6,6 @@ state ("NyxQuest")
     float posZ : "NyxQuest.exe", 0x002CF0E0, 0x20, 0x4, 0x1c, 0x0, 0xc, 0x0, 0x44;
 }
 
-post_Game = false;
-
 startup
 {
     settings.Add("Splits", true);
@@ -24,16 +22,36 @@ startup
     settings.Add("level_11", true, "Mount Parnassus", "Splits");          // "Levels/E1/L11.txt"
     settings.Add("level_12", true, "Mount Parnassus ||", "Splits");       // "Levels/E1/L12.txt"
     //settings.Add("level_13", true, "Arcadia", "Splits");                  // "Levels/E1/L13.txt"
-    settings.Add("Settings", true);
+    settings.Add("Settings", false);
     settings.Add("100_no_reset", false, "No Reset after Mount Parnassus ||", "Settings");
     //settings.Add("arcadia_il", false, "Arcadia IL", "Settings");
 
+    vars.post_Game = false;
     vars.TimerModel = new TimerModel { CurrentState = timer };
+}
+
+init
+{
+    if (timer.CurrentTimingMethod == TimingMethod.RealTime) // stolen from dude simulator 3, basically asks the runner to set their livesplit to game time
+    {
+        var timingMessage = MessageBox.Show (
+               "This game uses Time without Loads (Game Time) as the main timing method.\n"+
+                "LiveSplit is currently set to show Real Time (RTA).\n"+
+                "Would you like to set the timing method to Game Time? This will make verification easier",
+                "LiveSplit | NyxQuest: Kindred Spirits",
+               MessageBoxButtons.YesNo,MessageBoxIcon.Question
+        );
+
+        if (timingMessage == DialogResult.Yes)
+        {
+            timer.CurrentTimingMethod = TimingMethod.GameTime;
+        }
+    }
 }
 
 start
 {
-    post_Game = false;
+    vars.post_Game = false;
     if (current.LevelName != old.LevelName)
     {
         return new List<string>()
@@ -65,7 +83,7 @@ split
     float end = 813.6279f;
     if (current.LevelName == "Levels/E1/L12.txt" && settings["level_12"] && current.posX >= end && old.posX < end)
     {   //Didn't find a better way then just splitting on position for the final level, don't jump over lol
-        post_Game = true;
+        vars.post_Game = true;
         return true;
     }
 
@@ -93,6 +111,10 @@ isLoading
 
 reset
 {
-    return !(settings["100_no_reset"] && !post_Game) && !settings["arcadia_il"] && current.LevelName == "Levels/MainMenu.txt";
+    return !(settings["100_no_reset"] && !vars.post_Game) && !settings["arcadia_il"] && current.LevelName == "Levels/MainMenu.txt";
 }
 
+exit
+{
+	timer.IsGameTimePaused = true;
+}
